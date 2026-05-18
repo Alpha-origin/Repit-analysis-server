@@ -1,16 +1,22 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Form
+from fastapi import APIRouter, UploadFile, File, Form, Depends
 from core import CommonResponse
 from services import PortfolioService
-router = APIRouter(prefix="/meta", tags=["portfolio"])
 
-portfolio_service = PortfolioService()
+router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 
-@router.post("/", response_model=CommonResponse)
-async def get_portfolio(
-        pdf: UploadFile = File(...),
-        github_url: str = Form(...),
+
+def get_portfolio_service():
+    return PortfolioService()
+
+
+@router.post("/analyze", response_model=CommonResponse)
+async def analyze_portfolio(
+    portfolio: UploadFile = File(...),
+    github_url: str = Form(...),
+    portfolio_service: PortfolioService = Depends(get_portfolio_service)
 ):
-    pdf_bytes = await pdf.read()
+    pdf_bytes = await portfolio.read()
+    portfolio_text = await portfolio_service.get_portfolio_text(pdf_bytes)
 
-    result = await portfolio_service.parsePdf(pdf_bytes)
-    print(result)
+    # TODO: LLM 호출로 포트폴리오 데이터 구조화 (다음 단계)
+    return CommonResponse(data={"portfolio_text": portfolio_text})
