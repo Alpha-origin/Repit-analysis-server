@@ -1,4 +1,4 @@
-from utils.pdf_parser import PdfParser
+from services.pdf_parse.pdf_parser import PdfParser
 
 
 class PortfolioService:
