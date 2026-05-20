@@ -266,3 +266,51 @@ class GithubService:
 
     async def close(self):
         await self.client.aclose()
+
+    async def analyze_user(self, github_url: str):
+
+        try:
+            username = self.extract_username(
+                github_url
+            )
+
+            repos = await self.get_repositories(
+                github_url
+            )
+
+            results = []
+
+            for repo in repos:
+
+                repo_name = repo["name"]
+
+                readme = await self.get_readme_content(
+                    username,
+                    repo_name
+                )
+
+                package_json = await self.get_package_json(
+                    username,
+                    repo_name
+                )
+
+                stacks = self.detect_stack(
+                    package_json
+                )
+
+                files = await self.scan_repository(
+                    username,
+                    repo_name
+                )
+
+                results.append({
+                    "repo_name": repo_name,
+                    "readme": readme,
+                    "stacks": stacks,
+                    "files": files
+                })
+
+            return results
+
+        finally:
+            await self.close()
