@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Union
+
 import httpx
 import os
 import base64
@@ -186,7 +188,7 @@ class GithubService:
             self,
             username: str,
             repo_name: str
-    ) -> dict | None:
+    ) -> Union[dict, None]:
 
         url = f"{self.base_url}/repos/{username}/{repo_name}/contents/package.json"
 
