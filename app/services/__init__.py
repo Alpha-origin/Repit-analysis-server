@@ -1,1 +1,1 @@
-from .portfolio_service import PortfolioService
+from services.portfolio.portfolio_service import PortfolioService
