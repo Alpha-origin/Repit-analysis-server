@@ -1,5 +1,7 @@
 import json
 
+from pydantic import ValidationError
+
 from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
 from infrastructure.llm.dto.request import LLMRequest
 from infrastructure.llm.prompts.portfolio_prompt import (
@@ -46,5 +48,12 @@ class PortfolioService:
             lines = text.splitlines()
             text = "\n".join(lines[1:-1]).strip()
 
-        data = json.loads(text)
-        return PortfolioAnalysisResult(**data)
+        try:
+            data = json.loads(text)
+        except json.JSONDecodeError as e:
+            raise ValueError(f"LLM이 유효하지 않은 JSON을 반환했습니다: {e}") from e
+
+        try:
+            return PortfolioAnalysisResult(**data)
+        except ValidationError as e:
+            raise ValueError(f"LLM 응답이 예상 스키마와 다릅니다: {e}") from e
