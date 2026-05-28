@@ -1,7 +1,9 @@
 from pydantic import BaseModel
+from typing import Optional
 
 
 class LLMRequest(BaseModel):
-    prompt: str
+    message: list[dict]
     temperature: float
     max_tokens: int
+    system: Optional[str] = None

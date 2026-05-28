@@ -8,6 +8,6 @@ class BaseLLMClient(ABC):
     @abstractmethod
     async def generate(
             self,
-            model: LLMRequest
+            request: LLMRequest
     ) -> LLMResponse:
         pass
