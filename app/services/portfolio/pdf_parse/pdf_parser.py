@@ -26,15 +26,14 @@ class PdfParser:
     REPEATED_TEXT_THRESHOLD = 0.4
 
     def parse(self, pdf_bytes: bytes) -> str:
-        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
-        total_pages = len(doc)
+        with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+            total_pages = len(doc)
 
-        # 1단계: 모든 페이지에서 블록 추출 (소형 폰트 제거 포함)
-        all_pages_blocks = []
-        for page in doc:
-            blocks = self._extract_blocks(page)
-            all_pages_blocks.append(blocks)
-        doc.close()
+            # 1단계: 모든 페이지에서 블록 추출 (소형 폰트 제거 포함)
+            all_pages_blocks = []
+            for page in doc:
+                blocks = self._extract_blocks(page)
+                all_pages_blocks.append(blocks)
 
         # 2단계: 헤더/푸터 텍스트 감지
         repeated_texts = self._detect_repeated_texts(all_pages_blocks, total_pages)
