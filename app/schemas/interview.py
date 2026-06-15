@@ -11,18 +11,11 @@ class MajorType(str, Enum):
     BACKEND = "backend"
 
 
-# TODO(handoff): 아래 스키마들은 "비동기 입력/콜백 기반 분석 서버" 기준 초안이 섞여 있다.
-# - AnalysisAcceptedResponse: 입력 접수 ack 응답
-# - AnalysisCallbackPayload: API 서버 callback payload
-# - PreInterviewAnalysisResult: 종합데이터 + 원질문 묶음
-# 다음 세션에서는 실제 라우터/서비스 연결 후 사용하지 않는 기존 스키마와 경계를 다시 정리해야 한다.
-class InterviewGenerationOptions(BaseModel):
-    major: Optional[MajorType] = Field(default=None, description="지원 전공 분류")
+class InterviewSettings(BaseModel):
     interview_atmosphere: str = Field(description="면접 분위기")
     interviewer_style: str = Field(description="면접관 스타일")
     difficulty: str = Field(description="면접 난이도")
     focus_topics: list[str] = Field(default_factory=list, description="집중적으로 다루고 싶은 주제")
-    question_count: int = Field(default=5, ge=1, le=10, description="생성할 원질문 개수")
 
 
 class CandidateProjectHighlight(BaseModel):
@@ -61,19 +54,11 @@ class PreInterviewAnalysisResult(BaseModel):
     portfolio: PortfolioAnalysisResult = Field(description="포트폴리오 분석 결과")
     github_repository: GithubRepositoryAnalysisResult = Field(description="깃허브 분석 결과")
     candidate_profile: CandidateComprehensiveProfile = Field(description="종합 지원자 프로필")
-    original_questions: list[OriginalInterviewQuestion] = Field(default_factory=list, description="생성된 원질문")
-
-
-class InterviewPipelineResult(PreInterviewAnalysisResult):
-    pass
-
-
-class AnalysisAcceptedResponse(BaseModel):
-    analysis_request_id: str = Field(description="비동기 분석 요청 식별자")
-
-
-class AnalysisCallbackPayload(PreInterviewAnalysisResult):
-    analysis_request_id: str = Field(description="비동기 분석 요청 식별자")
+    original_questions: list[OriginalInterviewQuestion] = Field(
+        min_length=15,
+        max_length=15,
+        description="생성된 원질문 15개",
+    )
 
 
 class AnsweredInterviewQuestion(BaseModel):
@@ -115,7 +100,7 @@ class QuestionFeedback(BaseModel):
 
 
 class InterviewFeedbackRequest(BaseModel):
-    interview_options: InterviewGenerationOptions = Field(description="면접 설정")
+    interview_settings: InterviewSettings = Field(description="면접 설정")
     candidate_profile: CandidateComprehensiveProfile = Field(description="사전 생성된 종합 프로필")
     questions: list[AnsweredInterviewQuestion] = Field(default_factory=list, description="질문/답변 목록")
     portfolio: Optional[PortfolioAnalysisResult] = Field(default=None, description="선택적 포트폴리오 분석 결과")
