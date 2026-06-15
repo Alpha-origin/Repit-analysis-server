@@ -40,26 +40,34 @@
 
 # 현재 구현 상태 메모
 
-## 이미 구현된 로직
+## 공개 API
+- `POST /portfolio/analyze`
+  - 입력: 포트폴리오 PDF, GitHub 저장소 URL, 전공(frontend/backend)
+  - 처리: 포트폴리오 분석 -> GitHub 분석 -> 종합 데이터 생성 -> 원질문 15개 생성
+  - 출력: portfolio, github_repository, candidate_profile, original_questions
+- `POST /interview/feedback`
+  - 입력: 면접 사전 설정, 지원자 종합 프로필, 질문/답변 기록
+  - 출력: 전체 피드백, 질문별 피드백
+
+## 구현된 로직
 - 포트폴리오 PDF 파싱 및 구조화
 - GitHub 저장소 메타데이터 / README / 파일 목록 분석
 - 포트폴리오 + GitHub 기반 종합 데이터(candidate_profile) 생성
-- 종합 데이터를 기반으로 한 원질문 생성
+- 종합 데이터를 기반으로 한 원질문 15개 생성
 - 면접 종료 후 피드백 생성
+- `/portfolio/analyze` 동기 분석 결과 반환
+- `/interview/feedback` 동기 피드백 결과 반환
 
-## 현재 미완료 / 미연결 사항
-- `/portfolio/analyze` 는 현재 접수 ack API 형태만 남아 있고, 내부 비동기 작업 연결이 아직 없다
-- `major(frontend/backend)` 를 받은 뒤 실제 background task 로 분석을 시작하는 라우터 연결이 없다
-- `analysis_request_id` 를 기준으로 내부 분석 작업과 callback 을 이어주는 진입점이 없다
-- callback 결과를 API 서버로 보내는 서비스 초안은 있으나 실제 라우터/작업 플로우에 연결되지 않았다
-- callback 설정값(`API_SERVER_BASE_URL`, `ANALYSIS_CALLBACK_PATH`, `ANALYSIS_CALLBACK_SECRET`)은 코드 메모만 있고 config 에 아직 반영되지 않았다
-- 질문은 15개 고정 생성 방향으로 정리 중이며, 현재 실제 운영 플로우와의 검증은 아직 없다
+## 현재 데모 범위에서 제외
+- 비동기 background task
+- analysis_request_id 기반 작업 추적
+- API 서버 callback
+- callback HMAC 서명 및 재시도
+- 별도 작업 큐와 영속 저장소
 
-## 다음 구현 순서
-1. `/portfolio/analyze` 를 `portfolio + github_url + major` 입력 접수 API로 확정
-2. `analysis_request_id` 생성 후 즉시 ack 반환
-3. background task 또는 동등한 비동기 실행 경로에서 분석 작업 시작
-4. 포트폴리오 분석 -> GitHub 분석 -> 종합 데이터 생성 -> 원질문 15개 생성 순으로 실행
-5. 결과를 `analysis_request_id + portfolio + github_repository + candidate_profile + original_questions` payload 로 callback
-6. callback 서명 헤더(HMAC-SHA256) 및 재시도(최소 3회) 연결
-7. 전체 플로우 E2E 검증
+## 다음 검증 순서
+1. 유효한 PDF/GitHub URL/frontend 입력으로 전체 분석 결과 확인
+2. backend 입력에서 질문 성향 차이 확인
+3. 원질문이 정확히 15개 반환되는지 확인
+4. README/package.json이 없는 저장소 처리 확인
+5. 면접 질문/답변 입력으로 피드백 결과 확인
