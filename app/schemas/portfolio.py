@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
 from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class ProjectSchema(BaseModel):
@@ -21,3 +22,22 @@ class PortfolioAnalysisResult(BaseModel):
     overall_tech_stack: list[str] = Field(default_factory=list, description="전체 포트폴리오 통합 기술 스택")
     primary_role: str = Field(description="지원자의 주요 포지션 (예: 백엔드 개발자, 풀스택 개발자)")
     career_summary: str = Field(description="포트폴리오 전반에 대한 종합 요약 (2~3문장)")
+
+
+class GithubRepositoryFile(BaseModel):
+    name: str = Field(description="파일 이름")
+    path: str = Field(description="저장소 내 파일 경로")
+    extension: str = Field(default="", description="파일 확장자")
+    download_url: Optional[str] = Field(default=None, description="원본 파일 다운로드 URL")
+    size: Optional[int] = Field(default=None, description="파일 크기(bytes)")
+
+
+class GithubRepositoryAnalysisResult(BaseModel):
+    repo_name: str = Field(description="저장소 이름")
+    repo_url: Optional[str] = Field(default=None, description="저장소 URL")
+    description: str = Field(default="", description="저장소 설명")
+    default_branch: str = Field(default="", description="기본 브랜치")
+    language: Optional[str] = Field(default=None, description="대표 언어")
+    readme: str = Field(default="", description="README 내용")
+    stacks: list[str] = Field(default_factory=list, description="추론된 기술 스택")
+    files: list[GithubRepositoryFile] = Field(default_factory=list, description="분석 대상 파일 목록")

@@ -1,238 +1,224 @@
 from __future__ import annotations
 
-from typing import Union, Any
-
-import httpx
-import os
 import base64
 import json
+import re
+from typing import Optional
 
-from core.filters import (
-    BLACK_DIRS,
-    BLACK_EXTENSIONS,
-    WHITE_EXTENSIONS
-)
+import httpx
+
+from core.config import settings
+from core.filters import BLACK_DIRS, BLACK_EXTENSIONS, WHITE_EXTENSIONS
+
+
+class GithubServiceError(Exception):
+    def __init__(self, message: str, status_code: int = 400):
+        super().__init__(message)
+        self.status_code = status_code
 
 
 class GithubService:
-
     def __init__(self):
-
         self.base_url = "https://api.github.com"
 
-        self.headers = {
+        headers = {
             "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {os.getenv('GITHUB_TOKEN')}",
         }
+        if settings.GITHUB_TOKEN:
+            headers["Authorization"] = f"Bearer {settings.GITHUB_TOKEN}"
 
         self.client = httpx.AsyncClient(
-            headers=self.headers,
-            timeout=30.0
+            headers=headers,
+            timeout=30.0,
         )
 
-    def extract_username(self, github_url: str) -> str:
-        return github_url.strip("/").split("/")[-1]
+    def extract_repo_info(self, repo_url: str) -> tuple[str, str]:
+        cleaned_url = repo_url.strip()
+        match = re.search(
+            r"github\.com/(?P<owner>[^/\s]+)/(?P<repo>[^/\s]+?)(?:\.git)?/?$",
+            cleaned_url,
+        )
 
-    async def get_repositories(self, github_url: str) -> list:
-
-        username = self.extract_username(github_url)
-
-        url = f"{self.base_url}/users/{username}/repos"
-
-        params = {
-            "sort": "pushed",
-            "per_page": 5
-        }
-
-        try:
-            response = await self.client.get(
-                url,
-                params=params
+        if not match:
+            raise GithubServiceError(
+                "GitHub repository URL 형식이 올바르지 않습니다. 예: https://github.com/owner/repo",
+                status_code=400,
             )
 
+        owner = match.group("owner")
+        repo_name = match.group("repo")
+
+        if not owner or not repo_name:
+            raise GithubServiceError("GitHub 저장소 정보를 찾을 수 없습니다.", status_code=400)
+
+        return owner, repo_name
+
+    async def get_repository_metadata(self, owner: str, repo_name: str) -> dict:
+        url = f"{self.base_url}/repos/{owner}/{repo_name}"
+
+        try:
+            response = await self.client.get(url)
+            if response.status_code == 401:
+                raise GithubServiceError("GitHub 토큰 인증에 실패했습니다.", status_code=401)
+            if response.status_code == 403:
+                raise GithubServiceError(
+                    "GitHub API 접근이 거부되었습니다. 토큰 또는 요청 제한을 확인하세요.",
+                    status_code=403,
+                )
+            if response.status_code == 404:
+                raise GithubServiceError(
+                    f"GitHub 저장소 '{owner}/{repo_name}' 를 찾을 수 없습니다.",
+                    status_code=404,
+                )
+
             response.raise_for_status()
+            data = response.json()
 
-            repos = response.json()
+            return {
+                "repo_name": data.get("name", repo_name),
+                "repo_url": data.get("html_url"),
+                "description": data.get("description") or "",
+                "default_branch": data.get("default_branch") or "",
+                "language": data.get("language"),
+            }
 
-            if not isinstance(repos, list):
-                return []
+        except httpx.HTTPError as exc:
+            raise GithubServiceError(f"GitHub 저장소 정보 조회에 실패했습니다: {exc}", status_code=502) from exc
 
-            return [
-                repo for repo in repos
-                if not repo.get("fork", False)
-            ]
-
-        except httpx.HTTPError as e:
-            print(f"[GitHub API ERROR] {e}")
-            return []
-
-    async def get_readme_content(
-            self,
-            username: str,
-            repo_name: str
-    ) -> Union[list[Any], str]:
-
-        url = f"{self.base_url}/repos/{username}/{repo_name}/readme"
+    async def get_readme_content(self, owner: str, repo_name: str) -> str:
+        url = f"{self.base_url}/repos/{owner}/{repo_name}/readme"
 
         try:
             response = await self.client.get(url)
 
+            if response.status_code == 404:
+                return ""
+            if response.status_code == 401:
+                raise GithubServiceError("GitHub 토큰 인증에 실패했습니다.", status_code=401)
+            if response.status_code == 403:
+                raise GithubServiceError(
+                    "GitHub API 접근이 거부되었습니다. 토큰 또는 요청 제한을 확인하세요.",
+                    status_code=403,
+                )
+
             response.raise_for_status()
-
             data = response.json()
-
             content_b64 = data.get("content", "")
-
             if not content_b64:
-                return []
+                return ""
 
-            decoded_bytes = base64.b64decode(
-                content_b64.replace("\n", "")
-            )
+            decoded_bytes = base64.b64decode(content_b64.replace("\n", ""))
+            return decoded_bytes.decode("utf-8", errors="ignore")
 
-            return decoded_bytes.decode(
-                "utf-8",
-                errors="ignore"
-            )
-
-        except httpx.HTTPError as e:
-            print(f"[README HTTP ERROR] {repo_name}: {e}")
-            return []
-
-        except Exception as e:
-            print(f"[README UNKNOWN ERROR] {repo_name}: {e}")
-            return []
+        except httpx.HTTPError as exc:
+            raise GithubServiceError(f"README 조회에 실패했습니다 ({repo_name}): {exc}", status_code=502) from exc
 
     async def scan_repository(
-            self,
-            username: str,
-            repo_name: str,
-            path: str = "",
-            depth: int = 0,
-            max_depth: int = 10
-    ) -> list:
-
-        # 재귀 깊이 제한
+        self,
+        owner: str,
+        repo_name: str,
+        path: str = "",
+        depth: int = 0,
+        max_depth: int = 10,
+    ) -> list[dict]:
         if depth > max_depth:
             return []
 
-        url = f"{self.base_url}/repos/{username}/{repo_name}/contents/{path}"
-
+        url = f"{self.base_url}/repos/{owner}/{repo_name}/contents/{path}"
         try:
             response = await self.client.get(url)
+            if response.status_code == 404:
+                return []
+            if response.status_code == 401:
+                raise GithubServiceError("GitHub 토큰 인증에 실패했습니다.", status_code=401)
+            if response.status_code == 403:
+                raise GithubServiceError(
+                    "GitHub API 접근이 거부되었습니다. 토큰 또는 요청 제한을 확인하세요.",
+                    status_code=403,
+                )
 
             response.raise_for_status()
-
             contents = response.json()
-
             if not isinstance(contents, list):
                 return []
 
             results = []
 
             for item in contents:
-
                 item_type = item.get("type")
                 item_name = item.get("name", "")
 
-                # 디렉토리 처리
                 if item_type == "dir":
-
                     if item_name in BLACK_DIRS:
                         continue
 
                     sub_files = await self.scan_repository(
-                        username=username,
+                        owner=owner,
                         repo_name=repo_name,
                         path=item.get("path", ""),
                         depth=depth + 1,
-                        max_depth=max_depth
+                        max_depth=max_depth,
                     )
-
                     results.extend(sub_files)
 
-                # 파일 처리
                 elif item_type == "file":
-
                     ext = ""
-
                     if "." in item_name:
                         ext = "." + item_name.split(".")[-1].lower()
 
-                    # 블랙리스트 제외
                     if ext in BLACK_EXTENSIONS:
                         continue
-
-                    # 화이트리스트 제외
                     if ext and ext not in WHITE_EXTENSIONS:
                         continue
 
-                    results.append({
-                        "name": item_name,
-                        "path": item.get("path"),
-                        "extension": ext,
-                        "download_url": item.get("download_url")
-                    })
+                    results.append(
+                        {
+                            "name": item_name,
+                            "path": item.get("path"),
+                            "extension": ext,
+                            "download_url": item.get("download_url"),
+                            "size": item.get("size"),
+                        }
+                    )
 
             return results
 
-        except httpx.HTTPError as e:
-            print(f"[SCAN HTTP ERROR] {repo_name}/{path}: {e}")
-            return []
+        except httpx.HTTPError as exc:
+            raise GithubServiceError(
+                f"저장소 스캔에 실패했습니다 ({repo_name}/{path}): {exc}",
+                status_code=502,
+            ) from exc
 
-        except Exception as e:
-            print(f"[SCAN UNKNOWN ERROR] {repo_name}/{path}: {e}")
-            return []
-
-    async def get_package_json(
-            self,
-            username: str,
-            repo_name: str
-    ) -> Union[dict, None]:
-
-        url = f"{self.base_url}/repos/{username}/{repo_name}/contents/package.json"
+    async def get_package_json(self, owner: str, repo_name: str) -> Optional[dict]:
+        url = f"{self.base_url}/repos/{owner}/{repo_name}/contents/package.json"
 
         try:
             response = await self.client.get(url)
 
-            if response.status_code != 200:
+            if response.status_code == 404:
                 return None
+            if response.status_code in (401, 403):
+                response.raise_for_status()
 
+            response.raise_for_status()
             data = response.json()
-
             content_b64 = data.get("content", "")
-
             if not content_b64:
                 return None
 
-            decoded_bytes = base64.b64decode(
-                content_b64.replace("\n", "")
-            )
+            decoded_bytes = base64.b64decode(content_b64.replace("\n", ""))
+            return json.loads(decoded_bytes.decode("utf-8", errors="ignore"))
 
-            return json.loads(
-                decoded_bytes.decode(
-                    "utf-8",
-                    errors="ignore"
-                )
-            )
-
-        except (
-                json.JSONDecodeError,
-                ValueError,
-                httpx.HTTPError
-        ) as e:
-
-            print(f"[PACKAGE JSON ERROR] {repo_name}: {e}")
+        except (json.JSONDecodeError, ValueError, httpx.HTTPError):
             return None
 
-    def detect_stack(self, package_json: dict) -> list:
-
+    def detect_stack(self, package_json: Optional[dict]) -> list[str]:
         if not package_json:
             return []
 
         dependencies = {
             **package_json.get("dependencies", {}),
-            **package_json.get("devDependencies", {})
+            **package_json.get("devDependencies", {}),
         }
 
         tech_map = {
@@ -250,69 +236,37 @@ class GithubService:
             "socket.io": "Socket.IO",
             "fastapi": "FastAPI",
             "django": "Django",
-            "flask": "Flask"
+            "flask": "Flask",
         }
 
         detected = set()
-
         for dep in dependencies.keys():
-
             dep_lower = dep.lower()
-
             for key, value in tech_map.items():
-
                 if key in dep_lower:
                     detected.add(value)
 
-        return list(detected)
+        return sorted(detected)
 
-    async def close(self):
-        await self.client.aclose()
-
-    async def analyze_user(self, github_url: str):
-
+    async def analyze_repository(self, repo_url: str) -> dict:
         try:
-            username = self.extract_username(
-                github_url
-            )
+            owner, repo_name = self.extract_repo_info(repo_url)
 
-            repos = await self.get_repositories(
-                github_url
-            )
+            metadata = await self.get_repository_metadata(owner, repo_name)
+            readme = await self.get_readme_content(owner, repo_name)
+            package_json = await self.get_package_json(owner, repo_name)
+            stacks = self.detect_stack(package_json)
+            files = await self.scan_repository(owner, repo_name)
 
-            results = []
-
-            for repo in repos:
-
-                repo_name = repo["name"]
-
-                readme = await self.get_readme_content(
-                    username,
-                    repo_name
-                )
-
-                package_json = await self.get_package_json(
-                    username,
-                    repo_name
-                )
-
-                stacks = self.detect_stack(
-                    package_json
-                )
-
-                files = await self.scan_repository(
-                    username,
-                    repo_name
-                )
-
-                results.append({
-                    "repo_name": repo_name,
-                    "readme": readme,
-                    "stacks": stacks,
-                    "files": files
-                })
-            print(results)
-            return results
+            return {
+                **metadata,
+                "readme": readme,
+                "stacks": stacks,
+                "files": files,
+            }
 
         finally:
             await self.close()
+
+    async def close(self):
+        await self.client.aclose()
