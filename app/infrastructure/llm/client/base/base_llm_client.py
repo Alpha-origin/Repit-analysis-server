@@ -1,7 +1,7 @@
 from abc import abstractmethod, ABC
 
-from infrastructure.llm.dto.request import LLMRequest
-from infrastructure.llm.dto.response import LLMResponse
+from app.infrastructure.llm.dto.request import LLMRequest
+from app.infrastructure.llm.dto.response import LLMResponse
 
 
 class BaseLLMClient(ABC):
