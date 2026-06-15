@@ -7,8 +7,8 @@ from typing import Optional
 
 import httpx
 
-from core.config import settings
-from core.filters import BLACK_DIRS, BLACK_EXTENSIONS, WHITE_EXTENSIONS
+from app.core.config import settings
+from app.core.filters import BLACK_DIRS, BLACK_EXTENSIONS, WHITE_EXTENSIONS
 
 
 class GithubServiceError(Exception):

@@ -1,7 +1,7 @@
 import fitz
 import re
 from collections import Counter
-from services.portfolio.pdf_parse.txt_importance import is_noise_block, is_section_header
+from app.services.portfolio.pdf_parse.txt_importance import is_noise_block, is_section_header
 
 # 노션 PDF 특유의 불릿 문자 패턴
 BULLET_PATTERN = re.compile(r'^[◽◼▪▫•·‣⁃▸▹►▻➤➢➣➔→⇒※✦✧✱✲✳✴✵]+\s*')

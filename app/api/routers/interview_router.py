@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
 
-from core import CommonResponse
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.dto.LLMModel import LLMModel
-from infrastructure.llm.factory.factory import LLMFactory
-from schemas.interview import (
+from app.core import CommonResponse
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.dto.LLMModel import LLMModel
+from app.infrastructure.llm.factory.factory import LLMFactory
+from app.schemas.interview import (
     InterviewFeedbackRequest,
     InterviewFeedbackResult,
 )
-from services.interview_feedback_service import InterviewFeedbackService
+from app.services.interview_feedback_service import InterviewFeedbackService
 
 router = APIRouter(prefix="/interview", tags=["interview"])
 

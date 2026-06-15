@@ -1,9 +1,9 @@
-from infrastructure.llm.prompts.interview_prompt import (
+from app.infrastructure.llm.prompts.interview_prompt import (
     FEEDBACK_GENERATION_SYSTEM,
     build_feedback_generation_prompt,
 )
-from schemas.interview import InterviewFeedbackRequest, InterviewFeedbackResult
-from services.structured_llm_service import StructuredLLMService
+from app.schemas.interview import InterviewFeedbackRequest, InterviewFeedbackResult
+from app.services.structured_llm_service import StructuredLLMService
 
 
 class InterviewFeedbackService(StructuredLLMService):

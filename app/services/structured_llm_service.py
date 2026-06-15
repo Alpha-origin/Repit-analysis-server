@@ -4,8 +4,8 @@ from typing import TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.dto.request import LLMRequest
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.dto.request import LLMRequest
 
 T = TypeVar("T", bound=BaseModel)
 logger = logging.getLogger(__name__)

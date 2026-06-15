@@ -1,10 +1,10 @@
 from openai import AsyncOpenAI
 
-from core.config import settings
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.dto.LLMModel import LLMModel
-from infrastructure.llm.dto.request import LLMRequest
-from infrastructure.llm.dto.response import LLMResponse
+from app.core.config import settings
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.dto.LLMModel import LLMModel
+from app.infrastructure.llm.dto.request import LLMRequest
+from app.infrastructure.llm.dto.response import LLMResponse
 
 
 class OpenAIClient(BaseLLMClient):

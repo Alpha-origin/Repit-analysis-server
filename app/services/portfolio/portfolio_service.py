@@ -1,11 +1,11 @@
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.prompts.portfolio_prompt import (
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.prompts.portfolio_prompt import (
     PORTFOLIO_ANALYSIS_SYSTEM,
     build_portfolio_analysis_prompt,
 )
-from schemas.portfolio import PortfolioAnalysisResult
-from services.portfolio.pdf_parse.pdf_parser import PdfParser
-from services.structured_llm_service import StructuredLLMService
+from app.schemas.portfolio import PortfolioAnalysisResult
+from app.services.portfolio.pdf_parse.pdf_parser import PdfParser
+from app.services.structured_llm_service import StructuredLLMService
 
 
 class PortfolioService(StructuredLLMService):

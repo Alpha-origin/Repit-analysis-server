@@ -1,21 +1,21 @@
 from pydantic import BaseModel, Field
 
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.prompts.interview_prompt import (
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.prompts.interview_prompt import (
     COMPREHENSIVE_PROFILE_SYSTEM,
     QUESTION_GENERATION_SYSTEM,
     build_comprehensive_profile_prompt,
     build_question_generation_prompt,
 )
-from schemas.interview import (
+from app.schemas.interview import (
     CandidateComprehensiveProfile,
     MajorType,
     OriginalInterviewQuestion,
     PreInterviewAnalysisResult,
 )
-from services.github_service import GithubService
-from services.portfolio.portfolio_service import PortfolioService
-from services.structured_llm_service import StructuredLLMService
+from app.services.github_service import GithubService
+from app.services.portfolio.portfolio_service import PortfolioService
+from app.services.structured_llm_service import StructuredLLMService
 
 PRE_GENERATED_QUESTION_COUNT = 15
 

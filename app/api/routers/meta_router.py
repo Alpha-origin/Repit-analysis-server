@@ -1,13 +1,13 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 
-from core import CommonResponse
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.dto.LLMModel import LLMModel
-from infrastructure.llm.factory.factory import LLMFactory
-from schemas.interview import MajorType, PreInterviewAnalysisResult
-from services.github_service import GithubService, GithubServiceError
-from services.interview_analysis_service import InterviewAnalysisService
-from services.portfolio.portfolio_service import PortfolioService
+from app.core import CommonResponse
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.dto.LLMModel import LLMModel
+from app.infrastructure.llm.factory.factory import LLMFactory
+from app.schemas.interview import MajorType, PreInterviewAnalysisResult
+from app.services.github_service import GithubService, GithubServiceError
+from app.services.interview_analysis_service import InterviewAnalysisService
+from app.services.portfolio.portfolio_service import PortfolioService
 
 router = APIRouter(prefix="/portfolio", tags=["portfolio"])
 

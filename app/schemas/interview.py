@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from schemas.portfolio import GithubRepositoryAnalysisResult, PortfolioAnalysisResult
+from app.schemas.portfolio import GithubRepositoryAnalysisResult, PortfolioAnalysisResult
 
 
 class MajorType(str, Enum):

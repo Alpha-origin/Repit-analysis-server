@@ -5,12 +5,12 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-APP_DIR = Path(__file__).resolve().parents[1] / "app"
-sys.path.insert(0, str(APP_DIR))
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(PROJECT_ROOT))
 
-from infrastructure.llm.client.base.base_llm_client import BaseLLMClient
-from infrastructure.llm.dto.response import LLMResponse
-from services.structured_llm_service import StructuredLLMService
+from app.infrastructure.llm.client.base.base_llm_client import BaseLLMClient
+from app.infrastructure.llm.dto.response import LLMResponse
+from app.services.structured_llm_service import StructuredLLMService
 
 
 class FifteenItemsResponse(BaseModel):

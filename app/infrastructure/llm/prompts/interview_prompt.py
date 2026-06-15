@@ -1,6 +1,6 @@
 import json
 
-from schemas.interview import MajorType
+from app.schemas.interview import MajorType
 
 
 COMPREHENSIVE_PROFILE_SYSTEM = """당신은 IT 채용 면접 설계 전문가입니다.

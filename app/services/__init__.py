@@ -1,1 +1,1 @@
-from services.portfolio.portfolio_service import PortfolioService
+from app.services.portfolio.portfolio_service import PortfolioService
